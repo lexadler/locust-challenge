@@ -60,3 +60,7 @@ dmypy.json
 
 # Ruff stuff:
 .ruff_cache/
+
+# generated protos
+*_pb2.py
+*_pb2_grpc.py
