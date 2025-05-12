@@ -7,6 +7,7 @@ protobuf = "5.29.4"
 locust = "2.37.1"
 grpcio-tools = "1.71.0"
 grpcio = "1.71.0"
+grpc-interceptor = "0.15.4"
 
 [tool.poetry.group.lint.dependencies]
 mypy = "1.11.2"
