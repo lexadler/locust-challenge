@@ -3,9 +3,9 @@ from collections.abc import Callable
 from functools import cached_property
 from typing import Any
 
-import gevent
 import grpc
 import grpc.experimental.gevent as grpc_gevent
+from gevent.pool import Group
 from grpc_interceptor import ClientInterceptor
 from locust import User
 from locust.env import Environment
@@ -79,37 +79,21 @@ class GrpcUser(User):
         self._channel = grpc.intercept_channel(self._channel, interceptor)
         self.stub = self.stub_class(self._channel)
 
-        self._background_tasks: set[gevent.Greenlet] = set()  # A set (hash map) to store background tasks (greenlets)
+        self._background_tasks: Group = Group()  # A gevent.pool.Group object to store background tasks (greenlets)
         self._access_token: str | None = None
 
-    def _add_background_task(self, func: Callable, delay: int = 0):
+    def _add_background_task(self, func: Callable):
         """
-        Schedule a background task to run after a specified delay using gevent.
+        Schedule a background task using gevent Group.
 
         Args:
-            func (Callable): The function to run in the background.
-            delay (int, optional): Delay in seconds before executing the task. Defaults to 0.
+            func (Callable): The function to execute in a greenlet.
 
         Notes:
-            The greenlet is tracked in the `self._background_tasks` set until it completes or terminates,
-            at which point it is automatically removed via the `self._greenlet_done_callback` callback.
+            The spawned greenlet is added to a gevent Group. Group automatically
+            removes completed or failed greenlets, so no manual cleanup is needed.
         """
-        greenlet = gevent.spawn_later(delay, func)
-        greenlet.link(self._greenlet_done_callback)
-        if not greenlet.dead:
-            self._background_tasks.add(greenlet)
-
-    def _greenlet_done_callback(self, greenlet: gevent.Greenlet):
-        """
-        Callback function triggered when a background greenlet completes or terminates due to an error.
-
-        Args:
-            greenlet: The greenlet instance that has finished or failed.
-
-        Effect:
-            Removes the greenlet from the `self._background_tasks` set to ensure proper cleanup.
-        """
-        self._background_tasks.discard(greenlet)
+        self._background_tasks.spawn(func)
 
     def on_stop(self):
         """
@@ -117,10 +101,10 @@ class GrpcUser(User):
 
         Effect:
             Terminates all active background greenlets that were spawned during the user's lifecycle.
-            Uses `gevent.killall()` to ensure no background tasks continue running after the user stops.
+            Uses `Group.kill()` to ensure no background tasks continue running after the user stops.
         """
         if self._background_tasks:
-            gevent.killall(self._background_tasks, block=True, timeout=30)
+            self._background_tasks.kill(block=True, timeout=30)
 
     @cached_property
     def _auth_metadata(self) -> list[tuple[str, str]]:

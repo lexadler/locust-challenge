@@ -4,10 +4,12 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
+import gevent
 import grpc
 from locust import constant_pacing, task
 from locust.env import Environment
 from locust.exception import LocustError
+from locust.runners import STATE_CLEANUP, STATE_STOPPED, STATE_STOPPING
 
 import grpc_user
 from pb import (
@@ -24,7 +26,7 @@ DEFAULT_CREDENTIALS_DIR = Path(__file__).parent / 'credentials'
 DEFAULT_CREDENTIALS_FILE = DEFAULT_CREDENTIALS_DIR / 'credentials.json'
 DEFAULT_GRPC_SERVER_HOST = 'vacancies.cyrextech.dev:7823'
 CREDENTIALS_FILE_SCHEMA = DEFAULT_CREDENTIALS_DIR / 'credentials.schema.json'
-VACANCY_FETCH_BACKGROUND_TAKS_INTERVAL_SEC = 45
+VACANCY_FETCH_BACKGROUND_TASK_INTERVAL_SEC = 45
 VACANCY_SERVICE_TEST_FLOW_INTERVAL_SEC = 30
 
 
@@ -79,19 +81,20 @@ class VacancyServiceGrpcUser(grpc_user.GrpcUser):
         Called automatically when a Locust user starts.
 
         Authenticates the user using randomly selected credentials and
-        schedules periodic background vacancy fetch tasks.
+        schedules periodic background vacancies fetch tasks.
         """
         self._authenticate_user(*self._load_random_credentials())
-        self._schedule_vacancy_fetch()
+        self._add_background_task(self._schedule_vacancies_fetch)
 
-    def _schedule_vacancy_fetch(self):
+    def _schedule_vacancies_fetch(self):
         """
-        Schedules a vacancy fetch immediately, and then recursively every 45 seconds.
+        Schedules vacancies fetch every 45 seconds.
 
         Each scheduled fetch runs in its own greenlet and is tracked to ensure cleanup on shutdown.
         """
-        self._add_background_task(self._fetch_vacancies)
-        self._add_background_task(self._schedule_vacancy_fetch, VACANCY_FETCH_BACKGROUND_TAKS_INTERVAL_SEC)
+        while self.environment.runner.state not in (STATE_STOPPING, STATE_STOPPED, STATE_CLEANUP):
+            self._add_background_task(self._fetch_vacancies)
+            gevent.sleep(VACANCY_FETCH_BACKGROUND_TASK_INTERVAL_SEC)
 
     def _fetch_vacancies(self):
         """Fetches a list of all vacancies available on the server."""
