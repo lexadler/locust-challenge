@@ -40,6 +40,7 @@
 8. **Extract or create a .json file with test credentials**  
    (Optional) Extract the test credentials from the archive `credentials.zip` to the `credentials/` directory (password required).  
    Alternatively, you can manually create the `credentials/credentials.json` file using the [schema provided](credentials/credentials.schema.json).
+   > The credentials are **non-sensitive** and are for **test purposes only**. They are not linked to any real accounts or production environments.
 
 ## Usage
 Run Locust in standard UI mode:
