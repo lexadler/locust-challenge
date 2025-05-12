@@ -3,11 +3,12 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.10"
-protobuf = "5.29.4"
-locust = "2.37.1"
-grpcio-tools = "1.71.0"
-grpcio = "1.71.0"
+faker = "37.1.0"
 grpc-interceptor = "0.15.4"
+grpcio = "1.71.0"
+grpcio-tools = "1.71.0"
+locust = "2.37.1"
+protobuf = "5.29.4"
 
 [tool.poetry.group.lint.dependencies]
 mypy = "1.11.2"

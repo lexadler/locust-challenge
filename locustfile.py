@@ -1,11 +1,12 @@
 import json
+import logging
 import random
-import uuid
 from datetime import datetime
 from pathlib import Path
 
 import gevent
 import grpc
+from faker import Faker
 from locust import constant_pacing, task
 from locust.env import Environment
 from locust.exception import LocustError
@@ -28,6 +29,11 @@ DEFAULT_GRPC_SERVER_HOST = 'vacancies.cyrextech.dev:7823'
 CREDENTIALS_FILE_SCHEMA = DEFAULT_CREDENTIALS_DIR / 'credentials.schema.json'
 VACANCY_FETCH_BACKGROUND_TASK_INTERVAL_SEC = 45
 VACANCY_SERVICE_TEST_FLOW_INTERVAL_SEC = 30
+
+logger = logging.getLogger('vacancy_service_loader')
+fake = Faker()
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
 
 class VacancyServiceGrpcUser(grpc_user.GrpcUser):
@@ -116,11 +122,10 @@ class VacancyServiceGrpcUser(grpc_user.GrpcUser):
         All operations are authenticated and use gRPC service stubs with appropriate metadata.
         """
 
-        title = f'Vacancy {uuid.uuid4()}-{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
-        description = 'Test description'
-        division = random.choice(list(vacancy_pb2.Vacancy.DIVISION.values()))  # NOQA: S311
-        country = random.choice(['US', 'DE', 'JP', 'BR', 'RS'])  # NOQA: S311
-        # Create random vacancy with an unique title
+        title = f'Vacancy {fake.uuid4()}-{datetime.now().isoformat()}'
+        description = fake.text(max_nb_chars=200)
+        division = fake.random_int(min=0, max=len(vacancy_pb2.Vacancy.DIVISION.values()) - 1)
+        country = fake.country()
         req = rpc_create_vacancy_pb2.CreateVacancyRequest(
             Title=title, Description=description, Division=division, Country=country
         )
