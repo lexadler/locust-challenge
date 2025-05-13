@@ -113,5 +113,5 @@ class GrpcUser(User):
         which returns authentication metadata for gRPC requests in the form required by the `metadata` argument.
         """
         if self._access_token is None:
-            raise NotImplementedError('An attribute `self._access_token` was not set!')
+            raise ValueError('An attribute `self._access_token` was not set!')
         return [('authorization', f'Bearer {self._access_token}')]

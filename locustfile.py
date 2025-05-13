@@ -124,7 +124,7 @@ class VacancyServiceGrpcUser(grpc_user.GrpcUser):
 
         title = f'Vacancy {fake.uuid4()}-{datetime.now().isoformat()}'
         description = fake.text(max_nb_chars=200)
-        division = fake.random_int(min=0, max=len(vacancy_pb2.Vacancy.DIVISION.values()) - 1)
+        division = random.choice(vacancy_pb2.Vacancy.DIVISION.values())  # NOQA: S311
         country = fake.country()
         req = rpc_create_vacancy_pb2.CreateVacancyRequest(
             Title=title, Description=description, Division=division, Country=country
